@@ -1,0 +1,37 @@
+name: terraform-validate
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        dir:
+          - task1-2-ec2
+          - task1-2-ec2/bootstrap
+          - task3-iam/account-a
+          - task3-iam/account-b
+          - task5-bugfix
+    steps:
+      - uses: actions/checkout@v4
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+      - name: fmt (informational)
+        run: terraform fmt -check -diff -recursive
+        working-directory: ${{ matrix.dir }}
+        continue-on-error: true
+      - name: init (no backend, no credentials needed)
+        run: terraform init -backend=false -input=false
+        working-directory: ${{ matrix.dir }}
+      - name: validate
+        run: terraform validate
+        working-directory: ${{ matrix.dir }}
+
+  policy-json:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -m json.tool task4-ci-policy/ci-policy.json > /dev/null
